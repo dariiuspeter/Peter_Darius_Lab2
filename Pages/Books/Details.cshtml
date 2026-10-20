@@ -41,6 +41,22 @@
         <dd class="col-sm-10">
             @Html.DisplayFor(model => model.Book.Publisher.PublisherName)
         </dd>
+        <dt class="col-sm-2">
+            Categories
+        </dt>
+        <dd class="col-sm-10">
+            @if (Model.Book.BookCategories != null && Model.Book.BookCategories.Any())
+            {
+                foreach (var category in Model.Book.BookCategories)
+                {
+                    <span>@category.Category.ID @category.Category.CategoryName</span><br />
+                }
+            }
+            else
+            {
+                <span>-</span>
+            }
+        </dd>
     </dl>
 </div>
 <div>

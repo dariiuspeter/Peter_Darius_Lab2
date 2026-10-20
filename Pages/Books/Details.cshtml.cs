@@ -27,6 +27,9 @@ namespace Peter_Darius_Lab2.Pages.Books
             var book = await _context.Book
                 .Include(b => b.Publisher)
                 .Include(b => b.Author)
+                .Include(b => b.BookCategories)
+                    .ThenInclude(b => b.Category)
+                .AsNoTracking()
                 .FirstOrDefaultAsync(m => m.ID == id);
 
             if (book is not null)

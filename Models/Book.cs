@@ -24,5 +24,7 @@ namespace Peter_Darius_Lab2.Models
         [Display(Name = "Author")]
         public int? AuthorID { get; set; }
         public Author? Author { get; set; } //navigation property
+
+        public ICollection<BookCategory>? BookCategories { get; set; }
     }
 }

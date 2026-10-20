@@ -7,7 +7,7 @@ using Peter_Darius_Lab2.Models;
 
 namespace Peter_Darius_Lab2.Pages.Books
 {
-    public class EditModel : PageModel
+    public class EditModel : BookCategoriesPageModel
     {
         private readonly Peter_Darius_Lab2.Data.Peter_Darius_Lab2Context _context;
 
@@ -26,44 +26,63 @@ namespace Peter_Darius_Lab2.Pages.Books
                 return NotFound();
             }
 
-            var book = await _context.Book.FirstOrDefaultAsync(m => m.ID == id);
+            var book = await _context.Book
+                .Include(b => b.Publisher)
+                .Include(b => b.Author)
+                .Include(b => b.BookCategories).ThenInclude(b => b.Category)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(m => m.ID == id);
+
             if (book == null)
             {
                 return NotFound();
             }
             Book = book;
+
+            // apelam PopulateAssignedCategoryData pentru a obtine informatiile necesare
+            // checkbox-urilor folosind clasa AssignedCategoryData
+            PopulateAssignedCategoryData(_context, Book);
             PopulateDropDowns();
             return Page();
         }
 
-        // For more information, see https://aka.ms/RazorPagesCRUD.
-        public async Task<IActionResult> OnPostAsync()
+        public async Task<IActionResult> OnPostAsync(int? id, string[] selectedCategories)
         {
-            if (!ModelState.IsValid)
+            if (id == null)
             {
-                PopulateDropDowns();
-                return Page();
+                return NotFound();
             }
 
-            _context.Attach(Book).State = EntityState.Modified;
+            var bookToUpdate = await _context.Book
+                .Include(i => i.Publisher)
+                .Include(i => i.Author)
+                .Include(i => i.BookCategories)
+                    .ThenInclude(i => i.Category)
+                .FirstOrDefaultAsync(s => s.ID == id);
 
-            try
+            if (bookToUpdate == null)
             {
+                return NotFound();
+            }
+
+            if (await TryUpdateModelAsync<Book>(
+                bookToUpdate,
+                "Book",
+                i => i.Title, i => i.AuthorID,
+                i => i.Price, i => i.PublishingDate, i => i.PublisherID))
+            {
+                // aplicam informatiile din checkbox-uri la cartea editata
+                UpdateBookCategories(_context, selectedCategories, bookToUpdate);
                 await _context.SaveChangesAsync();
-            }
-            catch (DbUpdateConcurrencyException)
-            {
-                if (!BookExists(Book.ID))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                return RedirectToPage("./Index");
             }
 
-            return RedirectToPage("./Index");
+            // daca validarea a esuat, reafisam pagina cu ce a bifat utilizatorul
+            Book = bookToUpdate;
+            UpdateBookCategories(_context, selectedCategories, bookToUpdate);
+            PopulateAssignedCategoryData(_context, bookToUpdate);
+            PopulateDropDowns();
+            return Page();
         }
 
         private void PopulateDropDowns()
@@ -73,11 +92,6 @@ namespace Peter_Darius_Lab2.Pages.Books
                 _context.Set<Author>().OrderBy(a => a.LastName).ThenBy(a => a.FirstName)
                     .Select(a => new { a.ID, FullName = a.FirstName + " " + a.LastName }),
                 "ID", "FullName");
-        }
-
-        private bool BookExists(int id)
-        {
-            return _context.Book.Any(e => e.ID == id);
         }
     }
 }
